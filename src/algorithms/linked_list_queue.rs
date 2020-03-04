@@ -55,7 +55,8 @@ impl<T> LinkedQueue<T> {
             None => None,
             Some(first_node) => {
                 unsafe {
-                    let item = mem::replace(&mut first_node.borrow_mut().item, MaybeUninit::uninit().assume_init());
+                    let item =
+                        mem::replace(&mut first_node.borrow_mut().item, MaybeUninit::uninit().assume_init());
 
                     if let Some(next_node) = &first_node.borrow().next {
                         self.head = Some(Rc::clone(next_node));
@@ -89,7 +90,7 @@ mod tests {
 
     #[test]
     fn interface_operations_should_work_as_expected() {
-        let mut queue = LinkedQueue::<u32>::new();
+        let mut queue = LinkedQueue::new();
 
         assert!(queue.is_empty());
         assert!(queue.dequeue() == None);
@@ -114,6 +115,48 @@ mod tests {
         queue.dequeue();
         queue.enqueue(2);
         queue.dequeue();
+
+        assert!(queue.is_empty());
+
+        for i in 0..50 {
+            queue.enqueue(i);
+            queue.dequeue();
+        }
+
+        assert!(queue.is_empty());
+
+        for i in 0..1000 {
+            queue.enqueue(i);
+        }
+
+        for i in 0..1000 {
+            queue.dequeue();
+        }
+
+        assert!(queue.is_empty());
+
+        let mut queue = LinkedQueue::new();
+
+        for i in 0..100 {
+            queue.enqueue(i);
+        }
+
+        for i in 0..100 {
+            assert!(queue.dequeue() == Some(i));
+        }
+
+        for i in 0..50 {
+            queue.enqueue(i);
+            queue.dequeue();
+        }
+
+        for i in 0..1000 {
+            queue.enqueue(i);
+        }
+
+        for i in 0..1000 {
+            assert!(queue.dequeue() == Some(i));
+        }
 
         assert!(queue.is_empty());
     }
