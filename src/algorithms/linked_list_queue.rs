@@ -1,20 +1,20 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
-pub struct LinkedQueue {
-    head: Link,
-    tail: Link,
+pub struct LinkedQueue<T> {
+    head: Link<T>,
+    tail: Link<T>,
 }
 
-type Link = Option<Rc<RefCell<Node>>>;
+type Link<T> = Option<Rc<RefCell<Node<T>>>>;
 
-struct Node {
-    item: i32,
-    next: Link,
+struct Node<T> {
+    item: T,
+    next: Link<T>,
 }
 
 
-impl LinkedQueue {
+impl<T> LinkedQueue<T> {
     pub fn new() -> Self {
         LinkedQueue { head: None, tail: None, }
     }
@@ -26,7 +26,7 @@ impl LinkedQueue {
         }
     }
 
-    pub fn enqueue(&mut self, item: i32) {
+    pub fn enqueue(&mut self, item: T) {
         let new_node = Rc::new(RefCell::new(Node {
             item,
             next: None,
@@ -47,26 +47,31 @@ impl LinkedQueue {
         }
     }
 
-    pub fn dequeue(&mut self) -> Option<i32> {
+    pub fn dequeue(&mut self) -> Option<T> {
+        use std::mem;
+        use mem::MaybeUninit;
+
         match self.head.take() {
             None => None,
             Some(first_node) => {
-                let item = first_node.borrow().item;
+                unsafe {
+                    let item = mem::replace(&mut first_node.borrow_mut().item, MaybeUninit::uninit().assume_init());
 
-                if let Some(next_node) = &first_node.borrow().next {
-                    self.head = Some(Rc::clone(next_node));
-                } else {
-                    self.head = None;
-                    self.tail = None;
+                    if let Some(next_node) = &first_node.borrow().next {
+                        self.head = Some(Rc::clone(next_node));
+                    } else {
+                        self.head = None;
+                        self.tail = None;
+                    }
+
+                    Some(item)
                 }
-
-                Some(item)
             }
         }
     }
 }
 
-impl Drop for LinkedQueue {
+impl<T> Drop for LinkedQueue<T> {
     fn drop(&mut self) {
         let mut head_link = self.head.take();
 
@@ -84,7 +89,7 @@ mod tests {
 
     #[test]
     fn interface_operations_should_work_as_expected() {
-        let mut queue = LinkedQueue::new();
+        let mut queue = LinkedQueue::<u32>::new();
 
         assert!(queue.is_empty());
         assert!(queue.dequeue() == None);

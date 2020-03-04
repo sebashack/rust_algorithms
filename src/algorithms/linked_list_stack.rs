@@ -1,15 +1,15 @@
-pub struct LinkedStack {
-    head: Link,
+pub struct LinkedStack<T> {
+    head: Link<T>,
 }
 
-type Link = Option<Box<Node>>;
+type Link<T> = Option<Box<Node<T>>>;
 
-struct Node {
-    item: i32,
-    next: Link,
+struct Node<T> {
+    item: T,
+    next: Link<T>,
 }
 
-impl LinkedStack {
+impl<T> LinkedStack<T> {
     pub fn new() -> Self {
         LinkedStack { head: None }
     }
@@ -21,7 +21,7 @@ impl LinkedStack {
         }
     }
 
-    pub fn push(&mut self, item: i32) {
+    pub fn push(&mut self, item: T) {
         let new_node = Box::new(Node {
             item,
             next: self.head.take(),
@@ -30,7 +30,7 @@ impl LinkedStack {
         self.head = Some(new_node);
     }
 
-    pub fn pop(&mut self) -> Option<i32> {
+    pub fn pop(&mut self) -> Option<T> {
         match self.head.take() {
             None => None,
             Some(node) => {
@@ -41,7 +41,7 @@ impl LinkedStack {
     }
 }
 
-impl Drop for LinkedStack {
+impl<T> Drop for LinkedStack<T> {
     fn drop(&mut self) {
         let mut current_link = self.head.take();
         while let Some(mut boxed_node) = current_link {
@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     fn interface_operations_should_work_as_expected() {
-        let mut stack = LinkedStack::new();
+        let mut stack = LinkedStack::<u32>::new();
 
         assert!(stack.is_empty());
         assert!(stack.pop() == None);
