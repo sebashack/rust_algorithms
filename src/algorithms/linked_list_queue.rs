@@ -76,7 +76,7 @@ impl<T> Drop for LinkedQueue<T> {
     fn drop(&mut self) {
         let mut head_link = self.head.take();
 
-        while let Some(mut boxed_node) = head_link {
+        while let Some(boxed_node) = head_link {
             head_link = boxed_node.borrow_mut().next.take();
         }
 
