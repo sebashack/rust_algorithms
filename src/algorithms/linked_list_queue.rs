@@ -1,8 +1,8 @@
-use std::mem;
+use std::ptr;
 
-pub struct LinkedQueue<'a, T> {
+pub struct LinkedQueue<T> {
     head: Link<T>,
-    tail: Option<&'a mut Node<T>>,
+    tail: *mut Node<T>,
 }
 
 type Link<T> = Option<Box<Node<T>>>;
@@ -12,114 +12,107 @@ struct Node<T> {
     next: Link<T>,
 }
 
-impl<'a, T> LinkedQueue<'a, T> {
+pub struct IntoIter<T>(LinkedQueue<T>);
+
+pub struct Iter<'a, T> {
+    next: Option<&'a Node<T>>
+}
+
+pub struct IterMut<'a, T> {
+    next: Option<&'a mut Node<T>>,
+}
+
+impl<T> LinkedQueue<T> {
     pub fn new() -> Self {
-        LinkedQueue { head: None, tail: None, }
+        LinkedQueue { head: None, tail: ptr::null_mut(), }
     }
 
-    pub fn push(&'a mut self, item: T) {
-        let new_tail = Box::new(Node {
+    pub fn is_empty(&self) -> bool {
+        self.head.is_none()
+    }
+
+    pub fn enqueue(&mut self, item: T) {
+        let mut new_tail = Box::new(Node {
             item,
             next: None,
         });
 
-        let new_tail = match self.tail.take() {
-            Some(old_tail) => {
-                old_tail.next = Some(new_tail);
-                old_tail.next.as_mut().map(|node| &mut **node)
-            }
-            None => {
-                self.head = Some(new_tail);
-                self.head.as_mut().map(|node| &mut **node)
-            }
-        };
+        let raw_tail: *mut _ = &mut *new_tail;
 
-        self.tail = new_tail;
+        if self.tail.is_null() {
+            self.head = Some(new_tail);
+        } else {
+            unsafe {
+                (*self.tail).next = Some(new_tail);
+            }
+        }
+
+        self.tail = raw_tail;
+    }
+
+    pub fn dequeue(&mut self) -> Option<T> {
+        self.head.take().map(|head| {
+            let head = *head;
+            self.head = head.next;
+
+            if self.head.is_none() {
+                self.tail = ptr::null_mut();
+            }
+
+            head.item
+        })
+    }
+
+    pub fn into_iter(self) -> IntoIter<T> {
+        IntoIter(self)
+    }
+
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter { next: self.head.as_ref().map(|node| &**node) }
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        IterMut { next: self.head.as_mut().map(|node| &mut **node) }
     }
 }
 
-//pub struct LinkedQueue<T> {
-//    head: Link<T>,
-//    tail: Link<T>,
-//}
-//
-//type Link<T> = Option<Rc<RefCell<Node<T>>>>;
-//
-//struct Node<T> {
-//    item: T,
-//    next: Link<T>,
-//}
-//
-//
-//impl<T> LinkedQueue<T> {
-//    pub fn new() -> Self {
-//        LinkedQueue { head: None, tail: None, }
-//    }
-//
-//    pub fn is_empty(&self) -> bool {
-//        match self.head {
-//            None => true,
-//            Some(_) => false,
-//        }
-//    }
-//
-//    pub fn enqueue(&mut self, item: T) {
-//        let new_node = Rc::new(RefCell::new(Node {
-//            item,
-//            next: None,
-//        }));
-//
-//        let previous_tail = self.tail.take();
-//        self.tail = Some(Rc::clone(&new_node));
-//
-//        match &self.head {
-//            None => {
-//                self.head = Some(Rc::clone(&new_node));
-//            }
-//            Some(_) => {
-//                if let Some(node) = previous_tail {
-//                    node.borrow_mut().next = Some(Rc::clone(&new_node));
-//                }
-//            }
-//        }
-//    }
-//
-//    pub fn dequeue(&mut self) -> Option<T> {
-//        use std::mem;
-//        use mem::MaybeUninit;
-//
-//        match self.head.take() {
-//            None => None,
-//            Some(first_node) => {
-//                unsafe {
-//                    let item =
-//                        mem::replace(&mut first_node.borrow_mut().item, MaybeUninit::uninit().assume_init());
-//
-//                    if let Some(next_node) = &first_node.borrow().next {
-//                        self.head = Some(Rc::clone(next_node));
-//                    } else {
-//                        self.head = None;
-//                        self.tail = None;
-//                    }
-//
-//                    Some(item)
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//impl<T> Drop for LinkedQueue<T> {
-//    fn drop(&mut self) {
-//        let mut head_link = self.head.take();
-//
-//        while let Some(boxed_node) = head_link {
-//            head_link = boxed_node.borrow_mut().next.take();
-//        }
-//
-//        self.tail.take();
-//    }
-//}
+impl<T> Drop for LinkedQueue<T> {
+    fn drop(&mut self) {
+        let mut cur_link = self.head.take();
+        while let Some(mut boxed_node) = cur_link {
+            cur_link = boxed_node.next.take();
+        }
+    }
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.dequeue()
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.map(|node| {
+            self.next = node.next.as_ref().map(|node| &**node);
+            &node.item
+        })
+    }
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            self.next = node.next.as_mut().map(|node| &mut **node);
+            &mut node.item
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -196,5 +189,76 @@ mod tests {
         }
 
         assert!(queue.is_empty());
+    }
+
+    #[test]
+    fn into_iter_should_consume_the_queue() {
+        let mut queue = LinkedQueue::new();
+
+        for i in 0..25 {
+            queue.enqueue(i);
+        }
+
+        let mut k = 0;
+
+        for v in queue.into_iter() {
+            assert!(v == k);
+
+            k += 1;
+        }
+
+        //At this point it is impossible to use the queue since it has been moved.
+    }
+
+    #[test]
+    fn iter_should_traverse_the_queue_without_consuming_it() {
+        let mut queue = LinkedQueue::new();
+
+        for i in 0..25 {
+            queue.enqueue(i);
+        }
+
+        let mut k = 0;
+
+        for v in queue.iter() {
+            assert!(*v == k);
+
+            k += 1;
+        }
+
+        for i in 0..25 {
+            queue.dequeue();
+        }
+
+        assert!(queue.is_empty());
+
+        for i in 0..25 {
+            queue.enqueue(i);
+        }
+
+        k = 0;
+
+        for v in queue.iter() {
+            assert!(*v == k);
+
+            k += 1;
+        }
+    }
+
+    #[test]
+    fn iter_should_traverse_the_queue_while_mutating_it() {
+        let mut queue = LinkedQueue::new();
+
+        for i in 0..25 {
+            queue.enqueue(i);
+        }
+
+        for v in queue.iter_mut() {
+            *v = 0;
+        }
+
+        for v in queue.iter() {
+            assert!(*v == 0);
+        }
     }
 }
