@@ -1,5 +1,6 @@
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::cell::Ref;
 
 pub struct LinkedQueue<T> {
     head: Link<T>,
@@ -13,6 +14,11 @@ struct Node<T> {
     next: Link<T>,
 }
 
+pub struct ConsumerIter<T>(LinkedQueue<T>);
+
+pub struct Iter<'a, T> {
+    next: Option<Ref<'a, Node<T>>>,
+}
 
 impl<T> LinkedQueue<T> {
     pub fn new() -> Self {
@@ -69,6 +75,48 @@ impl<T> LinkedQueue<T> {
                 }
             }
         }
+    }
+
+    pub fn into_iter(self) -> ConsumerIter<T> {
+        ConsumerIter(self)
+    }
+
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            next: self.head.as_ref().map(|node| { node.borrow() })
+        }
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = Ref<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            let (next, item) = Ref::map_split(node, |node| {
+                (&node.next, &node.item)
+            });
+
+            //TODO: So far it has been impossible to solve the life time issues
+            //here. If possible find a way to implement RUST iterators
+            //without using the `unsafe` feature.
+            //let pipo = if next.is_some() {
+            //    Some(Ref::map(next.as_ref().unwrap().borrow(), |node| node))
+            //} else {
+            //    None
+            //};
+
+            //self.next = pipo;
+
+            item
+        })
+    }
+}
+
+impl<T> Iterator for ConsumerIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.dequeue()
     }
 }
 
@@ -159,5 +207,22 @@ mod tests {
         }
 
         assert!(queue.is_empty());
+    }
+
+    #[test]
+    fn into_iter_should_consume_the_queue() {
+        let mut queue = LinkedQueue::new();
+
+        for i in 0..25 {
+            queue.enqueue(i);
+        }
+
+        let mut k = 0;
+
+        for v in queue.into_iter() {
+            assert!(v == k);
+
+            k += 1;
+        }
     }
 }
