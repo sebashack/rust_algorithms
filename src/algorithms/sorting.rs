@@ -89,6 +89,13 @@ where
     v
 }
 
+pub fn shell_sort<T>(v: &mut Vec<T>) -> &mut Vec<T>
+where
+    T: Ord,
+{
+    shell_sort_by(v, |v0, v1| v0.cmp(v1))
+}
+
 #[cfg(test)]
 mod tests {
     extern crate rand;
