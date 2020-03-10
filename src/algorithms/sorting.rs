@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::cmp::Ordering::Less;
 
-pub fn selection_sort_by<T, F>(v: &mut Vec<T>, compare: F) -> &mut Vec<T>
+pub fn selection_sort_by<T, F>(v: &mut Vec<T>, compare: F)
 where
     F: Fn(&T, &T) -> Ordering,
 {
@@ -18,18 +18,16 @@ where
 
         v.swap(min, i);
     }
-
-    v
 }
 
-pub fn selection_sort<T>(v: &mut Vec<T>) -> &mut Vec<T>
+pub fn selection_sort<T>(v: &mut Vec<T>)
 where
     T: Ord,
 {
     selection_sort_by(v, |v0, v1| v0.cmp(v1))
 }
 
-pub fn insertion_sort_by<T, F>(v: &mut Vec<T>, compare: F) -> &mut Vec<T>
+pub fn insertion_sort_by<T, F>(v: &mut Vec<T>, compare: F)
 where
     F: Fn(&T, &T) -> Ordering,
 {
@@ -48,18 +46,16 @@ where
             j -= 1;
         }
     }
-
-    v
 }
 
-pub fn insertion_sort<T>(v: &mut Vec<T>) -> &mut Vec<T>
+pub fn insertion_sort<T>(v: &mut Vec<T>)
 where
     T: Ord,
 {
     insertion_sort_by(v, |v0, v1| v0.cmp(v1))
 }
 
-pub fn shell_sort_by<T, F>(v: &mut Vec<T>, compare: F) -> &mut Vec<T>
+pub fn shell_sort_by<T, F>(v: &mut Vec<T>, compare: F)
 where
     F: Fn(&T, &T) -> Ordering,
 {
@@ -67,11 +63,11 @@ where
 
     let mut h: usize = 1;
 
-    while (h < len / 3) {
+    while h < len / 3 {
         h = (3 * h) + 1
     }
 
-    while (h >= 1) {
+    while h >= 1 {
         for i in h..len {
             let mut j = i;
 
@@ -85,15 +81,71 @@ where
         }
         h /= 3;
     }
-
-    v
 }
 
-pub fn shell_sort<T>(v: &mut Vec<T>) -> &mut Vec<T>
+pub fn shell_sort<T>(v: &mut Vec<T>)
 where
     T: Ord,
 {
-    shell_sort_by(v, |v0, v1| v0.cmp(v1))
+    shell_sort_by(v, |v0, v1| v0.cmp(v1));
+}
+
+pub fn merge_sort_by<T, F>(v: &mut Vec<T>, compare: &F)
+where
+    F: Fn(&T, &T) -> Ordering,
+{
+    let len = v.len();
+    let mut aux = Vec::with_capacity(v.len());
+
+    _merge_sort(v, &mut aux, 0, len - 1, compare);
+}
+
+fn _merge_sort<T, F>(v: &mut Vec<T>, aux: &mut Vec<Option<T>>, lo: usize, hi: usize, compare: &F)
+where
+    F: Fn(&T, &T) -> Ordering,
+{
+    if hi <= lo {
+        return;
+    }
+
+    let mid = lo + ((hi - lo) / 2);
+    _merge_sort(v, aux, lo, mid, compare);
+    _merge_sort(v, aux, mid + 1, hi, compare);
+    merge(v, aux, lo, mid, hi, compare);
+}
+
+fn merge<T, F>(
+    v: &mut Vec<T>,
+    aux: &mut Vec<Option<T>>,
+    lo: usize,
+    mid: usize,
+    hi: usize,
+    compare: &F,
+) where
+    F: Fn(&T, &T) -> Ordering,
+{
+    for i in lo..=hi {
+        aux.insert(i, Some(v.remove(0)));
+    }
+
+    let mut i = lo;
+    let mut j = mid + 1;
+
+    for k in lo..=hi {
+        if i > mid {
+            v.insert(k, aux[j].take().unwrap());
+            j += 1;
+        } else if j > hi {
+            v.insert(k, aux[i].take().unwrap());
+            i += 1;
+        } else if let Less = compare(aux[j].as_ref().unwrap(), aux[i].as_ref().unwrap()) {
+            v.insert(k, aux[j].take().unwrap());
+            j += 1;
+        } else {
+            v.insert(k, aux[i].take().unwrap());
+            i += 1;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -119,6 +171,19 @@ mod tests {
         true
     }
 
+    fn gen_rand_vec() -> Vec<isize> {
+        let mut v = Vec::with_capacity(1000);
+        let mut rng = rand::thread_rng();
+
+        for i in 0..999 {
+            let n: isize = rng.gen_range(-999, 999);
+
+            v.insert(i, n);
+        }
+
+        v
+    }
+
     #[test]
     fn selection_sort_by_should_sort_the_vector() {
         let mut v = vec![12, 0, 3, 12, 23, 1, 9, 9, 10, 45, 6, 12, 100, 45, 3, 1, 2];
@@ -139,14 +204,16 @@ mod tests {
 
     #[test]
     fn shell_sort_by_should_sort_the_vector() {
-        let mut v = Vec::with_capacity(1000);
-        let mut rng = rand::thread_rng();
+        let mut v = gen_rand_vec();
 
-        for i in 0..999 {
-            let n: isize = rng.gen_range(-999, 999);
+        shell_sort_by(&mut v, |n, m| n.cmp(m));
 
-            v.insert(i, n);
-        }
+        assert!(is_sorted(&v));
+    }
+
+    #[test]
+    fn merge_sort_by_should_sort_the_vector() {
+        let mut v = gen_rand_vec();
 
         shell_sort_by(&mut v, |n, m| n.cmp(m));
 
