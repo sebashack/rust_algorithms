@@ -1,4 +1,4 @@
-use std::slice::{IterMut as IterMutVec};
+use std::slice::IterMut as IterMutVec;
 
 pub struct ArrayStack<T> {
     container: Vec<Option<T>>,
@@ -116,14 +116,14 @@ impl<'a, T> Iterator for IterMut<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.0.next() {
             None => None,
-            Some(item) => item.as_mut()
+            Some(item) => item.as_mut(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use  crate::algorithms::array_stack::ArrayStack;
+    use crate::algorithms::array_stack::ArrayStack;
 
     #[test]
     fn interface_operations_should_work_as_expected() {
@@ -158,7 +158,7 @@ mod tests {
         }
 
         for i in 0..99 {
-           assert!(stack.pop() == Some(98 - i));
+            assert!(stack.pop() == Some(98 - i));
         }
 
         assert!(stack.is_empty());

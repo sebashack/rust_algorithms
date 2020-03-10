@@ -36,7 +36,7 @@ impl Network {
 
 #[cfg(test)]
 mod tests {
-    use  crate::algorithms::connectivity_quick_union::Network;
+    use crate::algorithms::connectivity_quick_union::Network;
 
     #[test]
     fn correctly_determines_connections() {

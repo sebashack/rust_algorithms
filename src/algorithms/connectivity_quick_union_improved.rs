@@ -24,7 +24,9 @@ impl Network {
         let root_p = self.root(p);
         let root_q = self.root(q);
 
-        if root_p == root_q { return; }
+        if root_p == root_q {
+            return;
+        }
 
         if self.weights[root_p] < self.weights[root_q] {
             self.tree[root_p] = self.tree[root_q];
@@ -50,7 +52,7 @@ impl Network {
 
 #[cfg(test)]
 mod tests {
-    use  crate::algorithms::connectivity_quick_union_improved::Network;
+    use crate::algorithms::connectivity_quick_union_improved::Network;
 
     #[test]
     fn correctly_determines_connections() {

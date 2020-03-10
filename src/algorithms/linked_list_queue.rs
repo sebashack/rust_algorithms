@@ -15,7 +15,7 @@ struct Node<T> {
 pub struct IntoIter<T>(LinkedQueue<T>);
 
 pub struct Iter<'a, T> {
-    next: Option<&'a Node<T>>
+    next: Option<&'a Node<T>>,
 }
 
 pub struct IterMut<'a, T> {
@@ -24,7 +24,10 @@ pub struct IterMut<'a, T> {
 
 impl<T> LinkedQueue<T> {
     pub fn new() -> Self {
-        LinkedQueue { head: None, tail: ptr::null_mut(), }
+        LinkedQueue {
+            head: None,
+            tail: ptr::null_mut(),
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -32,10 +35,7 @@ impl<T> LinkedQueue<T> {
     }
 
     pub fn enqueue(&mut self, item: T) {
-        let mut new_tail = Box::new(Node {
-            item,
-            next: None,
-        });
+        let mut new_tail = Box::new(Node { item, next: None });
 
         let raw_tail: *mut _ = &mut *new_tail;
 
@@ -68,11 +68,15 @@ impl<T> LinkedQueue<T> {
     }
 
     pub fn iter(&self) -> Iter<'_, T> {
-        Iter { next: self.head.as_ref().map(|node| &**node) }
+        Iter {
+            next: self.head.as_ref().map(|node| &**node),
+        }
     }
 
     pub fn iter_mut(&mut self) -> IterMut<'_, T> {
-        IterMut { next: self.head.as_mut().map(|node| &mut **node) }
+        IterMut {
+            next: self.head.as_mut().map(|node| &mut **node),
+        }
     }
 }
 
@@ -116,7 +120,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use  crate::algorithms::linked_list_queue::LinkedQueue;
+    use crate::algorithms::linked_list_queue::LinkedQueue;
 
     #[test]
     fn interface_operations_should_work_as_expected() {

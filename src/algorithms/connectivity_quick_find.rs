@@ -30,7 +30,7 @@ impl Network {
 
 #[cfg(test)]
 mod tests {
-    use  crate::algorithms::connectivity_quick_find::Network;
+    use crate::algorithms::connectivity_quick_find::Network;
 
     #[test]
     fn correctly_determines_connections() {
