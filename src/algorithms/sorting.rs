@@ -55,9 +55,54 @@ pub fn insertion_sort<T>(v: &mut Vec<T>) -> &mut Vec<T>
     insertion_sort_by(v, |v0, v1| v0.cmp(v1))
 }
 
+pub fn shell_sort_by<T, F>(v: &mut Vec<T>, compare: F) -> &mut Vec<T>
+    where F: Fn(&T, &T) -> Ordering
+{
+    let len = v.len();
+
+    let mut h: usize = 1;
+
+    while (h < len / 3) { h = (3 * h) + 1 }
+
+    while (h >= 1) {
+        for i in h..len {
+            let mut j = i;
+
+            while j >= h {
+                if let Less = compare(&v[j], &v[j-h]) {
+                    v.swap(j, j-1);
+                }
+
+                j -= h;
+            }
+        }
+        h /= 3;
+    }
+
+    v
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::algorithms::sorting::{insertion_sort_by, selection_sort_by};
+    extern crate rand;
+
+    use rand::Rng;
+
+    use crate::algorithms::sorting::{insertion_sort_by, selection_sort_by, shell_sort_by};
+
+    fn is_sorted<T>(v: &Vec<T>) -> bool
+        where T: Ord
+    {
+        let len = v.len();
+
+        for (i, n) in v.iter().enumerate() {
+            if i < len - 1 &&  n > &v[i + 1] {
+                return false;
+            }
+        }
+
+        true
+    }
 
     #[test]
     fn selection_sort_by_should_sort_the_vector() {
@@ -66,13 +111,7 @@ mod tests {
 
         selection_sort_by(&mut v, |n, m| n.cmp(m));
 
-        let len = v.len();
-
-        for (i, n) in v.iter().enumerate() {
-            if i < len - 1 {
-                assert!(n <= &v[i + 1]);
-            }
-        }
+        assert!(is_sorted(&v));
     }
 
     #[test]
@@ -82,12 +121,22 @@ mod tests {
 
         insertion_sort_by(&mut v, |n, m| n.cmp(m));
 
-        let len = v.len();
+        assert!(is_sorted(&v));
+    }
 
-        for (i, n) in v.iter().enumerate() {
-            if i < len - 1 {
-                assert!(n <= &v[i + 1]);
-            }
+    #[test]
+    fn shell_sort_by_should_sort_the_vector() {
+        let mut v = Vec::with_capacity(1000);
+        let mut rng = rand::thread_rng();
+
+        for i in 0..999 {
+            let n: isize = rng.gen_range(-999, 999);
+
+            v.insert(i, n);
         }
+
+        shell_sort_by(&mut v, |n, m| n.cmp(m));
+
+        assert!(is_sorted(&v));
     }
 }
