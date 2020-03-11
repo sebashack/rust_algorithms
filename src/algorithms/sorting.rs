@@ -33,7 +33,14 @@ where
 {
     let len = v.len();
 
-    for i in 0..len {
+    _insertion_sort_by(v, 0, len - 1, &compare);
+}
+
+fn _insertion_sort_by<T, F>(v: &mut Vec<T>, lo: usize, hi: usize, compare: &F)
+where
+    F: Fn(&T, &T) -> Ordering,
+{
+    for i in lo..=hi {
         let mut j = i;
 
         while j > 0 {
@@ -90,14 +97,21 @@ where
     shell_sort_by(v, |v0, v1| v0.cmp(v1));
 }
 
-pub fn merge_sort_by<T, F>(v: &mut Vec<T>, compare: &F)
+pub fn merge_sort<T>(v: &mut Vec<T>)
+where
+    T: Ord,
+{
+    merge_sort_by(v, |v0, v1| v0.cmp(v1));
+}
+
+pub fn merge_sort_by<T, F>(v: &mut Vec<T>, compare: F)
 where
     F: Fn(&T, &T) -> Ordering,
 {
     let len = v.len();
     let mut aux = Vec::with_capacity(v.len());
 
-    _merge_sort(v, &mut aux, 0, len - 1, compare);
+    _merge_sort(v, &mut aux, 0, len - 1, &compare);
 }
 
 fn _merge_sort<T, F>(v: &mut Vec<T>, aux: &mut Vec<Option<T>>, lo: usize, hi: usize, compare: &F)
@@ -105,6 +119,13 @@ where
     F: Fn(&T, &T) -> Ordering,
 {
     if hi <= lo {
+        return;
+    }
+
+    let CUTOFF = 64;
+
+    if (hi <= lo + CUTOFF - 1) {
+        _insertion_sort_by(v, lo, hi, compare);
         return;
     }
 
@@ -124,8 +145,14 @@ fn merge<T, F>(
 ) where
     F: Fn(&T, &T) -> Ordering,
 {
-    for i in lo..=hi {
-        aux.insert(i, Some(v.remove(0)));
+    use std::mem::replace;
+    use std::mem::MaybeUninit;
+
+    unsafe {
+        for k in lo..=hi {
+            let uninit_val = MaybeUninit::<T>::uninit().assume_init();
+            aux.insert(k, Some(replace(&mut v[k], uninit_val)));
+        }
     }
 
     let mut i = lo;
@@ -133,16 +160,16 @@ fn merge<T, F>(
 
     for k in lo..=hi {
         if i > mid {
-            v.insert(k, aux[j].take().unwrap());
+            v[k] = aux[j].take().unwrap();
             j += 1;
         } else if j > hi {
-            v.insert(k, aux[i].take().unwrap());
+            v[k] = aux[i].take().unwrap();
             i += 1;
         } else if let Less = compare(aux[j].as_ref().unwrap(), aux[i].as_ref().unwrap()) {
-            v.insert(k, aux[j].take().unwrap());
+            v[k] = aux[j].take().unwrap();
             j += 1;
         } else {
-            v.insert(k, aux[i].take().unwrap());
+            v[k] = aux[i].take().unwrap();
             i += 1;
         }
     }
@@ -152,9 +179,10 @@ fn merge<T, F>(
 mod tests {
     extern crate rand;
 
+    use crate::algorithms::sorting::{
+        insertion_sort_by, merge_sort_by, selection_sort_by, shell_sort_by,
+    };
     use rand::Rng;
-
-    use crate::algorithms::sorting::{insertion_sort_by, selection_sort_by, shell_sort_by};
 
     fn is_sorted<T>(v: &Vec<T>) -> bool
     where
@@ -171,12 +199,12 @@ mod tests {
         true
     }
 
-    fn gen_rand_vec() -> Vec<isize> {
+    fn gen_rand_vec(n: usize) -> Vec<isize> {
         let mut v = Vec::with_capacity(1000);
         let mut rng = rand::thread_rng();
 
-        for i in 0..999 {
-            let n: isize = rng.gen_range(-999, 999);
+        for i in 0..n {
+            let n: isize = rng.gen_range(-(n as isize), n as isize);
 
             v.insert(i, n);
         }
@@ -204,7 +232,7 @@ mod tests {
 
     #[test]
     fn shell_sort_by_should_sort_the_vector() {
-        let mut v = gen_rand_vec();
+        let mut v = gen_rand_vec(1000);
 
         shell_sort_by(&mut v, |n, m| n.cmp(m));
 
@@ -213,9 +241,9 @@ mod tests {
 
     #[test]
     fn merge_sort_by_should_sort_the_vector() {
-        let mut v = gen_rand_vec();
+        let mut v = gen_rand_vec(2000);
 
-        shell_sort_by(&mut v, |n, m| n.cmp(m));
+        merge_sort_by(&mut v, |n, m| n.cmp(m));
 
         assert!(is_sorted(&v));
     }
