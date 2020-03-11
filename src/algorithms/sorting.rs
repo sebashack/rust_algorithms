@@ -132,6 +132,11 @@ where
     let mid = lo + ((hi - lo) / 2);
     _merge_sort(v, aux, lo, mid, compare);
     _merge_sort(v, aux, mid + 1, hi, compare);
+
+    if let Less = compare(&v[mid + 1], &v[mid]) {
+        return;
+    }
+
     merge(v, aux, lo, mid, hi, compare);
 }
 
@@ -241,7 +246,7 @@ mod tests {
 
     #[test]
     fn merge_sort_by_should_sort_the_vector() {
-        let mut v = gen_rand_vec(2000);
+        let mut v = gen_rand_vec(2701);
 
         merge_sort_by(&mut v, |n, m| n.cmp(m));
 
