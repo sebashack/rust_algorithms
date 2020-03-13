@@ -225,6 +225,7 @@ pub fn quick_sort_by<T, F>(v: &mut Vec<T>, compare: F)
 where
     F: Fn(&T, &T) -> Ordering,
 {
+    shuffle_vec(v);
     _quick_sort(v, 0, v.len() - 1, &compare)
 }
 
@@ -236,14 +237,29 @@ where
         return;
     };
 
-    let j = partition(v, lo, hi, compare);
+    let CUTOFF = 20;
 
+    if hi <= lo + CUTOFF - 1 {
+        _insertion_sort_by(v, lo, hi, compare);
+        return;
+    }
+
+    let j = partition(v, lo, hi, compare);
     if lo == 0 && j == 0 {
         _quick_sort(v, j + 1, hi, compare);
     } else {
         _quick_sort(v, lo, j - 1, compare);
         _quick_sort(v, j + 1, hi, compare);
     }
+}
+
+pub fn shuffle_vec<T>(v: &mut Vec<T>) {
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
+
+    let mut rng = thread_rng();
+
+    v.shuffle(&mut rng);
 }
 
 fn partition<T, F>(v: &mut Vec<T>, lo: usize, hi: usize, compare: &F) -> usize
@@ -292,7 +308,7 @@ mod tests {
 
     use crate::algorithms::sorting::{
         bottom_up_merge_sort_by, insertion_sort_by, merge_sort_by, quick_sort_by,
-        selection_sort_by, shell_sort_by,
+        selection_sort_by, shell_sort_by, shuffle_vec,
     };
     use rand::Rng;
 
@@ -311,15 +327,10 @@ mod tests {
         true
     }
 
-    fn gen_rand_vec(n: usize) -> Vec<isize> {
-        let mut v = Vec::with_capacity(1000);
-        let mut rng = rand::thread_rng();
+    fn gen_rand_vec(n: usize) -> Vec<usize> {
+        let mut v = (0..n).collect();
 
-        for i in 0..n {
-            let n: isize = rng.gen_range(-(n as isize), n as isize);
-
-            v.insert(i, n);
-        }
+        shuffle_vec(&mut v);
 
         v
     }
