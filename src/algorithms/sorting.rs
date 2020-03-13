@@ -1,4 +1,4 @@
-use std::cmp::Ordering::Less;
+use std::cmp::Ordering::{Equal, Greater, Less};
 use std::cmp::{min, Ordering};
 
 pub fn selection_sort_by<T, F>(v: &mut Vec<T>, compare: F)
@@ -253,15 +253,6 @@ where
     }
 }
 
-pub fn shuffle_vec<T>(v: &mut Vec<T>) {
-    use rand::seq::SliceRandom;
-    use rand::thread_rng;
-
-    let mut rng = thread_rng();
-
-    v.shuffle(&mut rng);
-}
-
 fn partition<T, F>(v: &mut Vec<T>, lo: usize, hi: usize, compare: &F) -> usize
 where
     F: Fn(&T, &T) -> Ordering,
@@ -302,15 +293,97 @@ where
     j
 }
 
+pub fn three_way_quick_sort<T>(v: &mut Vec<T>)
+where
+    T: Ord,
+    T: std::fmt::Display,
+{
+    three_way_quick_sort_by(v, |v1, v0| v1.cmp(v0))
+}
+
+pub fn three_way_quick_sort_by<T, F>(v: &mut Vec<T>, compare: F)
+where
+    F: Fn(&T, &T) -> Ordering,
+    T: std::fmt::Display,
+{
+    shuffle_vec(v);
+    _three_way_quick_sort(v, 0, v.len() - 1, &compare);
+}
+
+fn _three_way_quick_sort<T, F>(v: &mut Vec<T>, lo: usize, hi: usize, compare: &F)
+where
+    F: Fn(&T, &T) -> Ordering,
+    T: std::fmt::Display,
+{
+    if hi <= lo {
+        return;
+    }
+
+    //let CUTOFF = 20;
+
+    //if hi <= lo + CUTOFF - 1 {
+    //    _insertion_sort_by(v, lo, hi, compare);
+    //    return;
+    //}
+
+    let mut lt = lo;
+    let mut gt = hi;
+    let val = &v[lo] as *const T;
+    let mut i = lo;
+
+    let unsafe_v = v as *mut Vec<T>;
+
+    unsafe {
+        let val = val.as_ref().unwrap();
+
+        while i <= gt {
+            let cmp = compare(&v[i], val);
+
+            match cmp {
+                Less => {
+                    (*unsafe_v).swap(lt, i);
+                    i += 1;
+                    lt += 1;
+                }
+                Greater => {
+                    (*unsafe_v).swap(i, gt);
+                    gt -= 1;
+                }
+                Equal => i += 1,
+            }
+        }
+    }
+
+    println!("lo {}", lo);
+    println!("lt {}", lt);
+    println!("gt {}", gt);
+    println!("hi {}", hi);
+
+    if lo == 0 && lt == 0 {
+        _three_way_quick_sort(v, gt + 1, hi, compare);
+    } else {
+        _three_way_quick_sort(v, lo, lt - 1, compare);
+        _three_way_quick_sort(v, gt + 1, hi, compare);
+    }
+}
+
+pub fn shuffle_vec<T>(v: &mut Vec<T>) {
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
+
+    let mut rng = thread_rng();
+
+    v.shuffle(&mut rng);
+}
+
 #[cfg(test)]
 mod tests {
     extern crate rand;
 
     use crate::algorithms::sorting::{
         bottom_up_merge_sort_by, insertion_sort_by, merge_sort_by, quick_sort_by,
-        selection_sort_by, shell_sort_by, shuffle_vec,
+        selection_sort_by, shell_sort_by, shuffle_vec, three_way_quick_sort_by,
     };
-    use rand::Rng;
 
     fn is_sorted<T>(v: &Vec<T>) -> bool
     where
@@ -328,7 +401,28 @@ mod tests {
     }
 
     fn gen_rand_vec(n: usize) -> Vec<usize> {
-        let mut v = (0..n).collect();
+        let mut v: Vec<usize> = (0..2).collect();
+
+        v.push(0);
+        v.push(0);
+        v.push(0);
+        v.push(0);
+        v.push(0);
+        v.push(0);
+
+        v.push(2);
+        v.push(2);
+        v.push(2);
+        v.push(2);
+        v.push(2);
+        v.push(2);
+
+        v.push(1);
+        v.push(1);
+        v.push(1);
+        v.push(1);
+        v.push(1);
+        v.push(1);
 
         shuffle_vec(&mut v);
 
@@ -385,6 +479,19 @@ mod tests {
         let mut v = gen_rand_vec(2877);
 
         quick_sort_by(&mut v, |n, m| n.cmp(m));
+
+        assert!(is_sorted(&v));
+    }
+
+    #[test]
+    fn three_way_quick_sort_by_should_sort_the_vector() {
+        let mut v = gen_rand_vec(5);
+
+        three_way_quick_sort_by(&mut v, |n, m| n.cmp(m));
+
+        for e in v.iter() {
+            println!("{}", e);
+        }
 
         assert!(is_sorted(&v));
     }
