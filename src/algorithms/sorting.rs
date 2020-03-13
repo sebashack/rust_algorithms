@@ -1,5 +1,5 @@
-use std::cmp::Ordering;
 use std::cmp::Ordering::Less;
+use std::cmp::{min, Ordering};
 
 pub fn selection_sort_by<T, F>(v: &mut Vec<T>, compare: F)
 where
@@ -122,9 +122,9 @@ where
         return;
     }
 
-    let CUTOFF = 64;
+    let CUTOFF = 20;
 
-    if (hi <= lo + CUTOFF - 1) {
+    if hi <= lo + CUTOFF - 1 {
         _insertion_sort_by(v, lo, hi, compare);
         return;
     }
@@ -138,6 +138,40 @@ where
     }
 
     merge(v, aux, lo, mid, hi, compare);
+}
+
+pub fn bottom_up_merge_sort<T>(v: &mut Vec<T>)
+where
+    T: Ord,
+{
+    bottom_up_merge_sort_by(v, |n, m| n.cmp(m));
+}
+
+pub fn bottom_up_merge_sort_by<T, F>(v: &mut Vec<T>, compare: F)
+where
+    F: Fn(&T, &T) -> Ordering,
+{
+    let len = v.len();
+    let mut aux = Vec::with_capacity(len);
+
+    let mut sz = 1;
+
+    while sz < len {
+        let mut lo = 0;
+        while lo < len - sz {
+            merge(
+                v,
+                &mut aux,
+                lo,
+                lo + sz - 1,
+                min(lo + sz + sz - 1, len - 1),
+                &compare,
+            );
+            lo += sz * 2;
+        }
+
+        sz *= 2;
+    }
 }
 
 fn merge<T, F>(
@@ -180,12 +214,85 @@ fn merge<T, F>(
     }
 }
 
+pub fn quick_sort<T>(v: &mut Vec<T>)
+where
+    T: Ord,
+{
+    quick_sort_by(v, |v1, v0| v1.cmp(v0))
+}
+
+pub fn quick_sort_by<T, F>(v: &mut Vec<T>, compare: F)
+where
+    F: Fn(&T, &T) -> Ordering,
+{
+    _quick_sort(v, 0, v.len() - 1, &compare)
+}
+
+fn _quick_sort<T, F>(v: &mut Vec<T>, lo: usize, hi: usize, compare: &F)
+where
+    F: Fn(&T, &T) -> Ordering,
+{
+    if hi <= lo {
+        return;
+    };
+
+    let j = partition(v, lo, hi, compare);
+
+    if lo == 0 && j == 0 {
+        _quick_sort(v, j + 1, hi, compare);
+    } else {
+        _quick_sort(v, lo, j - 1, compare);
+        _quick_sort(v, j + 1, hi, compare);
+    }
+}
+
+fn partition<T, F>(v: &mut Vec<T>, lo: usize, hi: usize, compare: &F) -> usize
+where
+    F: Fn(&T, &T) -> Ordering,
+{
+    let mut i = lo;
+    let mut j = hi + 1;
+
+    loop {
+        i += 1;
+        while let Less = compare(&v[i], &v[lo]) {
+            if i == hi {
+                break;
+            }
+
+            i += 1;
+        }
+
+        println!("j out {}", j);
+        j -= 1;
+        while let Less = compare(&v[lo], &v[j]) {
+            if j == lo {
+                break;
+            }
+
+            println!("j in {}", j);
+            j -= 1;
+        }
+
+        if i >= j {
+            break;
+        }
+
+        v.swap(i, j);
+    }
+
+    v.swap(lo, j);
+
+    j
+}
+
 #[cfg(test)]
 mod tests {
     extern crate rand;
 
     use crate::algorithms::sorting::{
-        insertion_sort_by, merge_sort_by, selection_sort_by, shell_sort_by,
+        bottom_up_merge_sort_by, insertion_sort_by, merge_sort_by, quick_sort_by,
+        selection_sort_by, shell_sort_by,
     };
     use rand::Rng;
 
@@ -249,6 +356,24 @@ mod tests {
         let mut v = gen_rand_vec(2701);
 
         merge_sort_by(&mut v, |n, m| n.cmp(m));
+
+        assert!(is_sorted(&v));
+    }
+
+    #[test]
+    fn bottom_up_merge_sort_by_should_sort_the_vector() {
+        let mut v = gen_rand_vec(2877);
+
+        bottom_up_merge_sort_by(&mut v, |n, m| n.cmp(m));
+
+        assert!(is_sorted(&v));
+    }
+
+    #[test]
+    fn quick_sort_by_should_sort_the_vector() {
+        let mut v = gen_rand_vec(2877);
+
+        quick_sort_by(&mut v, |n, m| n.cmp(m));
 
         assert!(is_sorted(&v));
     }
