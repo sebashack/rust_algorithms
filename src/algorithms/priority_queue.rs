@@ -4,8 +4,6 @@ pub struct PriorityQueue<T> {
     is_max: bool,
 }
 
-use std::fmt;
-
 impl<T> PriorityQueue<T>
 where
     T: Ord,

@@ -1,4 +1,5 @@
 pub mod array_stack;
+pub mod binary_search_tree;
 pub mod connectivity_quick_find;
 pub mod connectivity_quick_union;
 pub mod connectivity_quick_union_improved;
