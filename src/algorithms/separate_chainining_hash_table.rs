@@ -1,11 +1,11 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use crate::algorithms::linked_list_queue::LinkedQueue;
+use crate::algorithms::linked_list_stack::LinkedStack;
 
 struct HashTable<K, V> {
     num_chains: usize,
-    chains: Vec<LinkedQueue<(Box<K>, Box<V>)>>,
+    chains: Vec<LinkedStack<(Box<K>, Box<V>)>>,
 }
 
 impl<K, V> HashTable<K, V>
@@ -17,7 +17,7 @@ where
         let mut chains = Vec::with_capacity(num_chains);
 
         for i in 0..num_chains {
-            chains.insert(i, LinkedQueue::new());
+            chains.insert(i, LinkedStack::new());
         }
 
         HashTable { num_chains, chains }
@@ -49,7 +49,7 @@ where
             }
         }
 
-        self.chains[i].enqueue((Box::new(key), Box::new(new_val)));
+        self.chains[i].push((Box::new(key), Box::new(new_val)));
     }
 
     fn hash(&self, key: &K) -> usize {
