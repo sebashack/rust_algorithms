@@ -7,4 +7,5 @@ pub mod linked_list_queue;
 pub mod linked_list_stack;
 pub mod llrb_tree;
 pub mod priority_queue;
+pub mod separate_chainining_hash_table;
 pub mod sorting;
