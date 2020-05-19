@@ -9,3 +9,4 @@ pub mod llrb_tree;
 pub mod priority_queue;
 pub mod separate_chainining_hash_table;
 pub mod sorting;
+pub mod undirected_graph;
