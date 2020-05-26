@@ -18,6 +18,12 @@ struct BFSPaths {
     origin: usize,
 }
 
+struct ConnectedComponents {
+    marked: Vec<bool>,
+    id: Vec<Option<usize>>,
+    pub count: usize,
+}
+
 impl UGraph {
     pub fn new(num_vertices: usize) -> Self {
         let mut edges = Vec::with_capacity(num_vertices);
@@ -49,15 +55,10 @@ impl UGraph {
 impl DFSPaths {
     pub fn new(g: &UGraph, origin: usize) -> Self {
         let mut paths = DFSPaths {
-            marked: Vec::new(),
-            edge_to: Vec::new(),
+            marked: vec![false; g.num_vertices],
+            edge_to: vec![None; g.num_vertices],
             origin,
         };
-
-        for v in 0..g.num_vertices {
-            paths.marked.push(false);
-            paths.edge_to.push(None);
-        }
 
         paths.dfs(g, origin);
 
@@ -101,15 +102,10 @@ impl DFSPaths {
 impl BFSPaths {
     pub fn new(g: &UGraph, origin: usize) -> Self {
         let mut paths = BFSPaths {
-            marked: Vec::new(),
-            edge_to: Vec::new(),
+            marked: vec![false; g.num_vertices],
+            edge_to: vec![None; g.num_vertices],
             origin,
         };
-
-        for v in 0..g.num_vertices {
-            paths.marked.push(false);
-            paths.edge_to.push(None);
-        }
 
         paths.bfs(g, origin);
 
@@ -158,10 +154,44 @@ impl BFSPaths {
     }
 }
 
+impl ConnectedComponents {
+    pub fn new(g: &UGraph) -> Self {
+        let mut cc = ConnectedComponents {
+            marked: vec![false; g.num_vertices],
+            id: vec![None; g.num_vertices],
+            count: 0,
+        };
+
+        for v in 0..g.num_vertices {
+            if !cc.marked[v] {
+                cc.dfs(g, v);
+                cc.count = cc.count + 1;
+            }
+        }
+
+        cc
+    }
+
+    pub fn id(&self, v: usize) -> Option<usize> {
+        self.id[v]
+    }
+
+    fn dfs(&mut self, g: &UGraph, v: usize) {
+        self.marked[v] = true;
+        self.id[v] = Some(self.count);
+
+        for w in g.get_adj_edges(v).iter() {
+            if !self.marked[*w] {
+                self.dfs(g, *w);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::algorithms::linked_list_stack::LinkedStack;
-    use crate::algorithms::undirected_graph::{BFSPaths, DFSPaths, UGraph};
+    use crate::algorithms::undirected_graph::{BFSPaths, ConnectedComponents, DFSPaths, UGraph};
 
     #[test]
     fn dfs_interface_operations_should_work_as_expected() {
@@ -239,5 +269,46 @@ mod tests {
         }
 
         assert!(!paths.has_path_to(8));
+    }
+
+    #[test]
+    fn cc_interface_operations_should_work_as_expected() {
+        let mut g = UGraph::new(17);
+
+        g.add_edge(0, 1);
+        g.add_edge(0, 2);
+        g.add_edge(0, 6);
+        g.add_edge(6, 4);
+        g.add_edge(4, 5);
+        g.add_edge(5, 3);
+
+        g.add_edge(7, 8);
+
+        g.add_edge(9, 10);
+        g.add_edge(9, 11);
+        g.add_edge(9, 12);
+        g.add_edge(11, 12);
+
+        g.add_edge(13, 14);
+        g.add_edge(13, 15);
+        g.add_edge(13, 16);
+        g.add_edge(15, 16);
+        g.add_edge(14, 15);
+
+        let cc = ConnectedComponents::new(&g);
+
+        assert!(cc.count == 4);
+
+        assert!(cc.id(0) == Some(0));
+        assert!(cc.id(5) == Some(0));
+        assert!(cc.id(6) == Some(0));
+        assert!(cc.id(4) == Some(0));
+        assert!(cc.id(7) == Some(1));
+        assert!(cc.id(9) == Some(2));
+        assert!(cc.id(10) == Some(2));
+        assert!(cc.id(11) == Some(2));
+        assert!(cc.id(13) == Some(3));
+        assert!(cc.id(14) == Some(3));
+        assert!(cc.id(16) == Some(3));
     }
 }
