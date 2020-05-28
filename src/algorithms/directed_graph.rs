@@ -30,6 +30,12 @@ struct DirectedCycle {
     cycle: LinkedStack<usize>,
 }
 
+struct KosarajuSharirSCC {
+    marked: Vec<bool>,
+    id: Vec<Option<usize>>,
+    pub count: usize,
+}
+
 impl DGraph {
     pub fn new(num_vertices: usize) -> Self {
         let mut edges = Vec::with_capacity(num_vertices);
@@ -54,6 +60,25 @@ impl DGraph {
 
     pub fn get_adj_edges_mut<'a>(&'a mut self, v: usize) -> &'a mut LinkedStack<usize> {
         &mut self.edges[v]
+    }
+
+    pub fn reverse(&self) -> DGraph {
+        let mut edges = Vec::with_capacity(self.num_vertices);
+
+        for v in 0..self.num_vertices {
+            edges.insert(v, LinkedStack::new());
+        }
+
+        for v in 0..self.num_vertices {
+            for w in self.edges[v].iter() {
+                edges[*w].push(v);
+            }
+        }
+
+        DGraph {
+            num_vertices: self.num_vertices,
+            edges,
+        }
     }
 }
 
@@ -256,10 +281,50 @@ impl DirectedCycle {
     }
 }
 
+impl KosarajuSharirSCC {
+    pub fn new(g: &DGraph) -> Self {
+        let mut cc = KosarajuSharirSCC {
+            marked: vec![false; g.num_vertices],
+            id: vec![None; g.num_vertices],
+            count: 0,
+        };
+
+        let top_sort = TopologicalSort::new(&g.reverse());
+
+        for v in top_sort.reverse_post().iter() {
+            if !cc.marked[*v] {
+                cc.dfs(g, *v);
+                cc.count = cc.count + 1;
+            }
+        }
+
+        cc
+    }
+
+    pub fn id(&self, v: usize) -> Option<usize> {
+        self.id[v]
+    }
+
+    pub fn strongly_connected(&self, v: usize, w: usize) -> bool {
+        self.id[v] == self.id[w]
+    }
+
+    fn dfs(&mut self, g: &DGraph, v: usize) {
+        self.marked[v] = true;
+        self.id[v] = Some(self.count);
+
+        for w in g.get_adj_edges(v).iter() {
+            if !self.marked[*w] {
+                self.dfs(g, *w);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::algorithms::directed_graph::{
-        BFSPaths, DFSPaths, DGraph, DirectedCycle, TopologicalSort,
+        BFSPaths, DFSPaths, DGraph, DirectedCycle, KosarajuSharirSCC, TopologicalSort,
     };
     use crate::algorithms::linked_list_stack::LinkedStack;
 
@@ -277,7 +342,7 @@ mod tests {
         g.add_edge(12, 9);
         g.add_edge(9, 10);
         g.add_edge(9, 11);
-        g.add_edge(8, 9);
+        g.add_edge(7, 9);
         g.add_edge(10, 12);
         g.add_edge(11, 4);
         g.add_edge(4, 3);
@@ -331,7 +396,7 @@ mod tests {
         g.add_edge(12, 9);
         g.add_edge(9, 10);
         g.add_edge(9, 11);
-        g.add_edge(8, 9);
+        g.add_edge(7, 9);
         g.add_edge(10, 12);
         g.add_edge(11, 4);
         g.add_edge(4, 3);
@@ -433,5 +498,53 @@ mod tests {
         assert!(c.pop() == Some(3));
         assert!(c.pop() == Some(1));
         assert!(c.pop() == Some(4));
+    }
+
+    #[test]
+    fn it_strongly_connected_components() {
+        let mut g = DGraph::new(13);
+
+        g.add_edge(4, 2);
+        g.add_edge(2, 3);
+        g.add_edge(3, 2);
+        g.add_edge(6, 0);
+        g.add_edge(0, 1);
+        g.add_edge(2, 0);
+        g.add_edge(11, 12);
+        g.add_edge(12, 9);
+        g.add_edge(9, 10);
+        g.add_edge(9, 11);
+        g.add_edge(7, 9);
+        g.add_edge(10, 12);
+        g.add_edge(11, 4);
+        g.add_edge(4, 3);
+        g.add_edge(3, 5);
+        g.add_edge(6, 8);
+        g.add_edge(8, 6);
+        g.add_edge(5, 4);
+        g.add_edge(0, 5);
+        g.add_edge(6, 4);
+        g.add_edge(6, 9);
+        g.add_edge(7, 6);
+
+        let mut cc = KosarajuSharirSCC::new(&g);
+
+        assert!(!cc.strongly_connected(0, 1));
+        assert!(!cc.strongly_connected(2, 6));
+        assert!(!cc.strongly_connected(6, 9));
+        assert!(!cc.strongly_connected(7, 6));
+        assert!(!cc.strongly_connected(7, 9));
+
+        assert!(cc.strongly_connected(0, 2));
+        assert!(cc.strongly_connected(0, 3));
+        assert!(cc.strongly_connected(0, 4));
+        assert!(cc.strongly_connected(0, 5));
+        assert!(cc.strongly_connected(2, 3));
+        assert!(cc.strongly_connected(2, 4));
+
+        assert!(cc.strongly_connected(6, 8));
+
+        assert!(cc.strongly_connected(9, 10));
+        assert!(cc.strongly_connected(9, 12));
     }
 }
