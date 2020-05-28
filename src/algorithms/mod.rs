@@ -3,6 +3,7 @@ pub mod binary_search_tree;
 pub mod connectivity_quick_find;
 pub mod connectivity_quick_union;
 pub mod connectivity_quick_union_improved;
+pub mod directed_graph;
 pub mod linked_list_queue;
 pub mod linked_list_stack;
 pub mod llrb_tree;
